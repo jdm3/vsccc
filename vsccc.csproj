@@ -5,6 +5,10 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <Copyright>Copyright (C) 2024 Jefferson Montgomery</Copyright>
+    <Description>Generates a clangd compile_commands.json file for a msbuild/VisualStudio project</Description>
   </PropertyGroup>
 
 </Project>
