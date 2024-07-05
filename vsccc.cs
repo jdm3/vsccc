@@ -1,7 +1,5 @@
 ﻿// Copyright (C) 2024 Jefferson Montgomery
 // SPDX-License-Identifier: MIT
-using Microsoft.Build.Construction;
-using Microsoft.Build.Exceptions;
 using System.Xml;
 
 internal class Program
@@ -363,7 +361,7 @@ internal class Program
     }
 
     // Parse option value N1=V1;N2=V2...
-    private static void ParseProperties(string s, Dictionary<string, string> props)
+    private static void ParseProperties(string s, Dictionary<string, string> macros)
     {
         foreach (var p in s.Split(';', StringSplitOptions.RemoveEmptyEntries)) {
             var v = p.Split('=', StringSplitOptions.RemoveEmptyEntries);
@@ -371,7 +369,7 @@ internal class Program
                 PrintUsageAndExit($"error: invalid property string: {s}");
             }
 
-            props[v[0]] = v[1];
+            macros[v[0]] = v[1];
         }
     }
 
@@ -450,24 +448,14 @@ internal class Program
 
         // Load the solution/project items
         var items = new List<Item>();
-        try {
-            if (Path.GetExtension(path) == ".sln") {
-                var sln = SolutionFile.Parse(path);
-                foreach (var prj in sln.ProjectsInOrder) {
-                    macros["ProjectName"] = prj.ProjectName;
-
-                    AddProject(prj.AbsolutePath, macros, items, verbose);
-                }
-            } else {
-                macros["ProjectName"] = Path.GetFileNameWithoutExtension(path);
-                AddProject(path, macros, items, verbose);
+        if (Path.GetExtension(path) == ".sln") {
+            foreach (var prj in LoadSolutionProjects(dir, path)) {
+                macros["ProjectName"] = prj.Name;
+                AddProject(prj.Path, macros, items, verbose);
             }
-        } catch (InvalidProjectFileException e) {
-            Console.Error.WriteLine($"error: {e.BaseMessage}");
-            Environment.Exit(1);
-        } catch (FileNotFoundException e) {
-            Console.Error.WriteLine($"error: {e.Message}");
-            Environment.Exit(1);
+        } else {
+            macros["ProjectName"] = Path.GetFileNameWithoutExtension(path);
+            AddProject(path, macros, items, verbose);
         }
 
         // Write the compile commands
