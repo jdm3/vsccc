@@ -459,11 +459,16 @@ internal class Program
         }
 
         // Write the compile commands
+        var ccPath = Path.Combine(dir, "compile_commands.json");
+        if (verbose) {
+            Console.WriteLine($"{ccPath}");
+        }
+
         var sdir = ConditionString(dir);
         var compiledItemTypes = new Dictionary<string, string> {
             { "ClCompile", "c++" },
         };
-        using (var sw = new StreamWriter(Path.Combine(dir, "compile_commands.json"))) {
+        using (var sw = new StreamWriter(ccPath)) {
             sw.Write("[");
 
             var first = true;
@@ -490,6 +495,15 @@ internal class Program
                     case "AdditionalIncludeDirectories":
                         foreach (var inc in kv.Value.Split(';')) {
                             sw.Write($" -I{AddEscapedQuotesIfNeeded(ConditionPath(dir, inc))}");
+                        }
+                        break;
+
+                    case "LanguageStandard":
+                        switch (kv.Value) {
+                        default:             sw.Write($" -std=c++14"); break;
+                        case "stdcpp17":     sw.Write($" -std=c++17"); break;
+                        case "stdcpp20":     sw.Write($" -std=c++20"); break;
+                        case "stdcpplatest": sw.Write($" -std=c++20"); break;
                         }
                         break;
 
