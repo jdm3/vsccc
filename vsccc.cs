@@ -467,6 +467,7 @@ internal class Program
         var sdir = ConditionString(dir);
         var compiledItemTypes = new Dictionary<string, string> {
             { "ClCompile", "c++" },
+            { "ClInclude", "c++" },
         };
         using (var sw = new StreamWriter(ccPath)) {
             sw.Write("[");
