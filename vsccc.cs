@@ -2,8 +2,34 @@
 // SPDX-License-Identifier: MIT
 using System.Xml;
 
+internal static class Exts
+{
+    public static string GetNextWord(this string s, int i, out int j)
+    {
+        while (char.IsWhiteSpace(s[i])) i++;
+
+        int b;
+        int e;
+        if (s[i] == '\"') {
+            i++;
+            b = i;
+            while (s[i] != '\"') i++;
+            e = i;
+            i++;
+        } else {
+            b = i;
+            while (!char.IsWhiteSpace(s[i])) i++;
+            e = i;
+        }
+
+        j = i;
+        return s.Substring(b, e - b);
+    }
+}
+
 internal class Program
 {
+
     // Helper function to handle Path.GetDirectoryName()==null case (which occurs when path is a
     // root directory e.g. c:\).
     private static string GetDirectoryName(string path)
@@ -141,6 +167,34 @@ internal class Program
             Environment.Exit(1);
             return name;
         }
+
+        // Convert AdditionalOptions:"/external:I path" into
+        // AdditionalIncludeDirectories:path;%(AdditionalIncludeDirectories)
+        public void ConvertExternalIncludePaths()
+        {
+            if (Properties.TryGetValue("AdditionalOptions", out var additionalOptions)) {
+
+                int i = additionalOptions.IndexOf("/external:I", StringComparison.InvariantCultureIgnoreCase);
+                if (i != -1) {
+                    do
+                    {
+                        var dir = additionalOptions.GetNextWord(i + 11, out var j);
+                        additionalOptions = additionalOptions.Remove(i, j - i);
+
+                        Properties["AdditionalIncludeDirectories"] = dir + ';' + Properties["AdditionalIncludeDirectories"];
+
+                        i = additionalOptions.IndexOf("/external:I", i, StringComparison.InvariantCultureIgnoreCase);
+                    } while (i != -1);
+
+                    additionalOptions = additionalOptions.Trim();
+                    if (additionalOptions.Length == 0) {
+                        Properties.Remove("AdditionalOptions");
+                    } else {
+                        Properties["AdditionalOptions"] = additionalOptions;
+                    }
+                }
+            }
+        }
     }
 
     private static void AddProject(string prjPath, Dictionary<string, string> globalMacros, List<Item> items, bool verbose)
@@ -217,7 +271,7 @@ internal class Program
                 Console.WriteLine($"    {item.GetMetadata("FullPath")}");
                 Console.WriteLine($"        {item.Type}");
                 foreach (var kv in item.Properties) {
-                    Console.WriteLine($"        {kv.Key}: {kv.Value}");
+                    Console.WriteLine($"            {kv.Key}: {kv.Value}");
                 }
             }
         }
@@ -264,7 +318,7 @@ internal class Program
     //         </type1>
     //         ...
     //     </ItemDefinitionGroup>
-    // adds type1:Properties1, etc. to itemDefinitions.
+    // adds type1:(prop1:type1), etc. to itemDefinitions.
     private static void ParseItemDefinitionGroup(XmlNode itemDefinitionGroup, Dictionary<string, Dictionary<string, string>> itemDefinitions)
     {
         foreach (XmlNode n in itemDefinitionGroup) {
@@ -457,6 +511,11 @@ internal class Program
         } else {
             macros["ProjectName"] = Path.GetFileNameWithoutExtension(path);
             AddProject(path, macros, items, verbose);
+        }
+
+        // Adjustments...
+        foreach (var item in items) {
+            item.ConvertExternalIncludePaths();
         }
 
         // Write the compile commands
