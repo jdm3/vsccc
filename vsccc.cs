@@ -313,6 +313,7 @@ internal class Program
     private static string ConditionString(string s)
     {
         s = s.Replace('\\', '/');
+        s = s.Replace("\"", "\\\"");
         return s;
     }
 
@@ -510,7 +511,7 @@ internal class Program
 
                     case "PreprocessorDefinitions":
                         foreach (var def in kv.Value.Split(';')) {
-                            sw.Write($" -D{def}");
+                            sw.Write($" -D{ConditionString(def)}");
                         }
                         break;
 
