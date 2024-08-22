@@ -249,11 +249,14 @@ internal class Program
             item.Identity = ReplaceMacros(item.Identity, macros);
 
             foreach (var k in item.Properties.Keys) {
-                var v = item.Properties[k];
-                v = ReplaceItemMetadata(v, item, k.ToLower());
-                v = ReplaceMacros(v, macros);
-                v = string.Join(';', v.Split(';', StringSplitOptions.RemoveEmptyEntries));
-                item.Properties[k] = v;
+                var vs = item.Properties[k].Split(';', StringSplitOptions.RemoveEmptyEntries);
+                for (int j = 0; j < vs.Length; ++j) {
+                    vs[j] = vs[j].Trim();
+                    vs[j] = ReplaceItemMetadata(vs[j], item, k.ToLower());
+                    vs[j] = ReplaceMacros(vs[j], macros);
+                }
+
+                item.Properties[k] = string.Join(';', vs.Where(v => !string.IsNullOrEmpty(v)));
             }
         }
 
@@ -268,10 +271,9 @@ internal class Program
             for (int i = baseItemIndex; i < items.Count; ++i) {
                 var item = items[i];
 
-                Console.WriteLine($"    {item.GetMetadata("FullPath")}");
-                Console.WriteLine($"        {item.Type}");
+                Console.WriteLine($"    {item.Type}: {item.GetMetadata("FullPath")}");
                 foreach (var kv in item.Properties) {
-                    Console.WriteLine($"            {kv.Key}: {kv.Value}");
+                    Console.WriteLine($"        {kv.Key}: {kv.Value}");
                 }
             }
         }
@@ -364,7 +366,7 @@ internal class Program
     }
 
     // Makes a string suitable for the compile_commands.json file.
-    private static string ConditionString(string s)
+    private static string ConditionStringForJson(string s)
     {
         s = s.Replace('\\', '/');
         s = s.Replace("\"", "\\\"");
@@ -372,18 +374,18 @@ internal class Program
     }
 
     // Makes a path suitable for the compile_commands.json file.
-    private static string ConditionPath(string baseDir, string path)
+    private static string ConditionPathForJson(string baseDir, string path)
     {
         if (path.StartsWith(baseDir, StringComparison.CurrentCultureIgnoreCase)) {
             path = path.Substring(baseDir.Length + 1);
         }
-        return ConditionString(path);
+        return ConditionStringForJson(path);
     }
 
     // Makes a string suitable for the command portion of the compile_commands.json file.
     private static string AddEscapedQuotesIfNeeded(string s)
     {
-        s = ConditionString(s);
+        s = ConditionStringForJson(s);
         if (s.Any(Char.IsWhiteSpace)) {
             s = $"\\\"{s}\\\"";
         }
@@ -524,7 +526,7 @@ internal class Program
             Console.WriteLine($"{ccPath}");
         }
 
-        var sdir = ConditionString(dir);
+        var sdir = ConditionStringForJson(dir);
         var compiledItemTypes = new Dictionary<string, string> {
             { "ClCompile", "c++" },
             { "ClInclude", "c++" },
@@ -538,7 +540,7 @@ internal class Program
                     continue;
                 }
 
-                var filePath = ConditionPath(dir, item.GetMetadata("FullPath"));
+                var filePath = ConditionPathForJson(dir, item.GetMetadata("FullPath"));
 
                 if (first) {
                     first = false;
@@ -555,7 +557,7 @@ internal class Program
                     switch (kv.Key) {
                     case "AdditionalIncludeDirectories":
                         foreach (var inc in kv.Value.Split(';')) {
-                            sw.Write($" -I{AddEscapedQuotesIfNeeded(ConditionPath(dir, inc))}");
+                            sw.Write($" -I{AddEscapedQuotesIfNeeded(ConditionPathForJson(dir, inc))}");
                         }
                         break;
 
@@ -570,7 +572,7 @@ internal class Program
 
                     case "PreprocessorDefinitions":
                         foreach (var def in kv.Value.Split(';')) {
-                            sw.Write($" -D{ConditionString(def)}");
+                            sw.Write($" -D{ConditionStringForJson(def)}");
                         }
                         break;
 
