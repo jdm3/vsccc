@@ -119,22 +119,36 @@ internal class Program
     {
         var projects = new List<Project>();
         foreach (var line in File.ReadAllLines(slnPath)) {
-
             if (line.StartsWith("Project(\"")) {
-                int i1 = line.IndexOf('"', 53);
-                int i2 = line.IndexOf('"', i1 + 4);
+                int i1 = line.IndexOf('"', 9);
+                int i2 = line.IndexOf('"', i1 + 6);
+                int i3 = line.IndexOf('"', i2 + 4);
 
-                var name = line.Substring(53, i1 - 53);
-                var path = line.Substring(i1 + 4, i2 - i1 - 4);
+                var typeGuid = line.Substring(9, i1 - 9);
+                var name     = line.Substring(i1 + 6, i2 - i1 - 6);
+                var path     = line.Substring(i2 + 4, i3 - i2 - 4);
 
-                path = Path.GetFullPath(Path.Combine(slnDir, path));
+                // https://stackoverflow.com/questions/10802198/visual-studio-project-type-guids
+                switch (typeGuid.ToUpper()) {
+                case "{2150E333-8FDC-42A3-9474-1A3956D46DE8}": // Solution Folder
+                    continue;
 
-                if (!File.Exists(path)) {
-                    Console.Error.WriteLine($"error: dependent project does not exist: {path}");
+                case "{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}": // C++
+                    path = Path.GetFullPath(Path.Combine(slnDir, path));
+
+                    if (!File.Exists(path)) {
+                        Console.Error.WriteLine($"error: dependent project does not exist: {path}");
+                        Environment.Exit(1);
+                    }
+
+                    projects.Add(new Project{ Name = name, Path = path });
+                    break;
+
+                default:
+                    Console.Error.WriteLine($"error: unsupported project type: {typeGuid}");
                     Environment.Exit(1);
+                    break;
                 }
-
-                projects.Add(new Project{ Name = name, Path = path });
             }
         }
         return projects;
