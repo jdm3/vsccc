@@ -307,10 +307,18 @@ internal class Program
                 item.Type = n.Name;
                 item.Identity = include.Value;
 
-                // Point to the type's properties or create a new properties dictionary if there
-                // isn't one, or if we are overwriting properties.
-                if (itemDefinitions.ContainsKey(n.Name)) {
-                    item.Properties = itemDefinitions[n.Name];
+                var propName = n.Name;
+                if (propName == "ClInclude") {  // Use ClCompile properties for ClInclude files
+                    propName = "ClCompile";
+                }
+
+                // Point to the type's properties.
+                //
+                // If there isn't one, create a new empty one.
+                //
+                // If we are overwriting properties, then we create a copy.
+                if (itemDefinitions.ContainsKey(propName)) {
+                    item.Properties = itemDefinitions[propName];
 
                     if (n.HasChildNodes) {
                         item.Properties = new Dictionary<string, string>(item.Properties);
