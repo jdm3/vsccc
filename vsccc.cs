@@ -195,7 +195,11 @@ internal class Program
                         var dir = additionalOptions.GetNextWord(i + 11, out var j);
                         additionalOptions = additionalOptions.Remove(i, j - i);
 
-                        Properties["AdditionalIncludeDirectories"] = dir + ';' + Properties["AdditionalIncludeDirectories"];
+                        if (Properties.TryGetValue("AdditionalIncludeDirectories", out var aid)) {
+                            Properties["AdditionalIncludeDirectories"] = dir + ';' + aid;
+                        } else {
+                            Properties.Add("AdditionalIncludeDirectories", dir);
+                        }
 
                         i = additionalOptions.IndexOf("/external:I", i, StringComparison.InvariantCultureIgnoreCase);
                     } while (i != -1);
