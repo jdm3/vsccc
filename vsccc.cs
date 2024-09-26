@@ -547,7 +547,7 @@ internal class Program
         }
 
         // Write the compile commands
-        var ccPath = Path.Combine(dir, "compile_commands.json");
+        var ccPath = Path.Combine(Directory.GetCurrentDirectory(), "compile_commands.json");
         if (verbose) {
             Console.WriteLine($"{ccPath}");
         }
