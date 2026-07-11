@@ -403,7 +403,11 @@ internal class Program
     private static string ConditionPathForJson(string baseDir, string path)
     {
         if (path.StartsWith(baseDir, StringComparison.CurrentCultureIgnoreCase)) {
-            path = path.Substring(baseDir.Length + 1);
+            if (baseDir.Length == path.Length) {
+                path = ".";
+            } else {
+                path = path.Substring(baseDir.Length + 1);
+            }
         }
         return ConditionStringForJson(path);
     }
